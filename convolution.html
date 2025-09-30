@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ Tích chập và Lọc Trung vị</title>
+    <style>
+        /* --- KHAI BÁO BIẾN CSS VÀ THIẾT LẬP CHUNG --- */
+        :root {
+            --primary-color: #007bff;
+            --success-color: #28a745;
+            --bg-color: #f0f2f5;
+            --white: #fff;
+            --text-color: #333;
+            --border-color: #ced4da;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px 10px; 
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center; /* Căn giữa nội dung chính */
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 768px; /* Giới hạn chiều rộng như trang A4 */
+            background-color: var(--white);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            text-align: center;
+            font-size: 1.8em;
+        }
+
+        h2, h3 {
+            color: #555;
+            margin-top: 25px;
+            border-left: 5px solid #ccc;
+            padding-left: 10px;
+        }
+
+        hr {
+            border: 0;
+            height: 1px;
+            background: #eee;
+            margin: 20px 0;
+        }
+
+        section {
+            padding: 0;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+        
+        /* --- INPUT CHUNG --- */
+        input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            box-sizing: border-box;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        
+        .inline-inputs {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .inline-inputs input {
+            width: calc(50% - 5px);
+        }
+        
+        /* --- BUTTON --- */
+        button {
+            background-color: var(--success-color);
+            color: var(--white);
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 15px;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #1e7e34;
+        }
+
+        /* --- LƯỚI MA TRẬN (GRID) --- */
+        .matrix-container {
+            margin-top: 15px;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto; /* Cho phép cuộn ngang nếu ma trận quá lớn */
+        }
+
+        .matrix-grid {
+            display: grid;
+            gap: 5px;
+            /* Giữ nguyên grid-template-columns: repeat(C, auto); sẽ được set bằng JS */
+        }
+
+        .matrix-input-cell {
+            width: 50px; /* Chiều rộng ô nhập */
+            height: 30px;
+            text-align: center;
+            padding: 2px;
+            border: 1px solid #b8daff;
+            font-size: 14px;
+        }
+
+        .matrix-display-cell {
+            width: 60px; /* Chiều rộng ô hiển thị */
+            height: 35px;
+            line-height: 35px;
+            text-align: center;
+            background-color: #e9ecef;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 14px;
+            font-weight: 500;
+            overflow: hidden; 
+            white-space: nowrap;
+        }
+
+        /* --- KẾT QUẢ VÀ LỖI --- */
+        #convolution-result-section, #median-filter-section {
+            display: none;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <h1>Công cụ Tích chập và Lọc Trung vị</h1>
+
+    <section id="input-section">
+        <h2>1. Tham số Tích chập (Convolution)</h2>
+        
+        <div class="input-group">
+            <label>Kích thước Ma trận Đầu vào (Rows, Cols):</label>
+            <div class="inline-inputs">
+                <input type="number" id="R" value="4" min="1" onchange="generateMatrixInputs('input')">
+                <span>x</span>
+                <input type="number" id="C" value="4" min="1" onchange="generateMatrixInputs('input')">
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <label>Giá trị Ma trận Đầu vào:</label>
+            <div id="input-matrix-container" class="matrix-container">
+                </div>
+        </div>
+
+        <div class="input-group">
+            <label>Kích thước Kernel/Bộ lọc (Rows, Cols):</label>
+            <div class="inline-inputs">
+                <input type="number" id="KR" value="3" min="1" onchange="generateMatrixInputs('kernel')">
+                <span>x</span>
+                <input type="number" id="KC" value="3" min="1" onchange="generateMatrixInputs('kernel')">
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <label>Giá trị Kernel/Bộ lọc:</label>
+            <div id="kernel-matrix-container" class="matrix-container">
+                </div>
+        </div>
+
+        <div class="inline-inputs" style="justify-content: space-between;">
+            <div class="input-group" style="width: 48%;">
+                <label for="padding">Padding (P):</label>
+                <input type="number" id="padding" value="0" min="0" style="width: 100%;">
+            </div>
+            <div class="input-group" style="width: 48%;">
+                <label for="stride">Stride (S):</label>
+                <input type="number" id="stride" value="1" min="1" style="width: 100%;">
+            </div>
+        </div>
+
+        <button onclick="performConvolution()">Thực hiện Tích chập</button>
+        <div id="conv-error" class="error"></div>
+    </section>
+
+    <hr>
+
+    <section id="convolution-result-section">
+        <h2>2. Kết quả Ma trận Tích chập (Feature Map)</h2>
+        <p>Kích thước đầu ra: <span id="output-size"></span></p>
+        <div id="convolution-output-container" class="matrix-container">
+            </div>
+    </section>
+
+    <hr>
+
+    <section id="median-filter-section">
+        <h2>3. Lọc Trung vị (Median Filtering)</h2>
+        
+        <div class="input-group">
+            <label for="median-kernel-size">Kích thước Window/Neighbor $(N \times N)$:</label>
+            <input type="number" id="median-kernel-size" value="3" min="1" step="2" style="width: 150px;">
+            <small> Kích thước phải là số lẻ (ví dụ: 3, 5, 7)</small>
+        </div>
+
+        <div class="input-group">
+            <label for="median-mode">Chế độ Trung vị Chẵn:</label>
+            <select id="median-mode">
+                <option value="first">Nếu chẵn, chọn giá trị đầu tiên (theo yêu cầu)</option>
+                <option value="average">Nếu chẵn, tính trung bình 2 giá trị giữa</option>
+            </select>
+        </div>
+
+        <button onclick="performMedianFilter()">Thực hiện Lọc Trung vị</button>
+        <div id="median-error" class="error"></div>
+
+        <h3>Kết quả Lọc Trung vị</h3>
+        <div id="median-output-container" class="matrix-container">
+            </div>
+    </section>
+</div>
+
+    <script>
+        let CONV_RESULT_MATRIX = []; // Biến toàn cục để lưu ma trận kết quả tích chập
+
+        // --- HÀM TẠO GIAO DIỆN LƯỚI Ô ---
+
+        /**
+         * Tạo các ô input theo kích thước ma trận/kernel đã nhập.
+         * @param {string} type - 'input' hoặc 'kernel'.
+         */
+        function generateMatrixInputs(type) {
+            const R_id = type === 'input' ? 'R' : 'KR';
+            const C_id = type === 'input' ? 'C' : 'KC';
+            const container_id = type === 'input' ? 'input-matrix-container' : 'kernel-matrix-container';
+
+            const R = parseInt(document.getElementById(R_id).value);
+            const C = parseInt(document.getElementById(C_id).value);
+            const container = document.getElementById(container_id);
+
+            if (isNaN(R) || isNaN(C) || R <= 0 || C <= 0) {
+                container.innerHTML = `<span class="error">Kích thước ${type} không hợp lệ.</span>`;
+                return;
+            }
+
+            // Thiết lập CSS Grid
+            container.innerHTML = `<div id="${type}-grid" class="matrix-grid" style="grid-template-columns: repeat(${C}, auto);"></div>`;
+            const grid = document.getElementById(`${type}-grid`);
+            
+            // Dữ liệu mặc định cho dễ thử nghiệm
+            const defaultInput = [
+                [1, 2, 1, 0],
+                [5, 6, 2, 3],
+                [4, 1, 9, 8],
+                [0, 2, 3, 1]
+            ];
+            const defaultKernel = [
+                [1, 0, -1],
+                [1, 0, -1],
+                [1, 0, -1]
+            ];
+
+            // Tạo các ô input
+            for (let r = 0; r < R; r++) {
+                for (let c = 0; c < C; c++) {
+                    const cell = document.createElement('input');
+                    cell.type = 'number';
+                    cell.id = `${type}-${r}-${c}`;
+                    cell.className = 'matrix-input-cell';
+                    
+                    // Đặt giá trị mặc định nếu nằm trong phạm vi ma trận mẫu
+                    let defaultValue = 0;
+                    if (type === 'input' && r < defaultInput.length && c < defaultInput[r].length) {
+                        defaultValue = defaultInput[r][c];
+                    } else if (type === 'kernel' && r < defaultKernel.length && c < defaultKernel[r].length) {
+                        defaultValue = defaultKernel[r][c];
+                    }
+                    cell.value = defaultValue;
+
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+        // --- HÀM HỖ TRỢ XỬ LÝ MA TRẬN VÀ HIỂN THỊ KẾT QUẢ ---
+
+        /**
+         * Lấy giá trị từ các ô input lưới và chuyển thành mảng 2D.
+         */
+        function getMatrixFromInputs(type, R, C) {
+            const matrix = [];
+            for (let r = 0; r < R; r++) {
+                const row = [];
+                for (let c = 0; c < C; c++) {
+                    const cell = document.getElementById(`${type}-${r}-${c}`);
+                    const value = parseFloat(cell.value);
+                    if (isNaN(value)) {
+                        document.getElementById('conv-error').textContent = `Lỗi: Giá trị tại ô ${type}[${r}, ${c}] không hợp lệ.`;
+                        return null;
+                    }
+                    row.push(value);
+                }
+                matrix.push(row);
+            }
+            return matrix;
+        }
+        
+        /**
+         * Hiển thị ma trận 2D thành lưới các ô div.
+         */
+        function displayMatrixGrid(matrix, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            if (!matrix || matrix.length === 0 || matrix[0].length === 0) {
+                container.textContent = "Không có kết quả.";
+                return;
+            }
+
+            const R = matrix.length;
+            const C = matrix[0].length;
+            
+            // Thiết lập CSS Grid
+            container.innerHTML = `<div class="matrix-grid" style="grid-template-columns: repeat(${C}, auto);"></div>`;
+            const grid = container.querySelector('.matrix-grid');
+
+            for (let r = 0; r < R; r++) {
+                for (let c = 0; c < C; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'matrix-display-cell';
+                    // Hiển thị giá trị, làm tròn đến 2 chữ số thập phân
+                    cell.textContent = matrix[r][c].toFixed(2); 
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+        // --- HÀM TÍNH TOÁN TÍCH CHẬP ---
+
+        function performConvolution() {
+            const errorElement = document.getElementById('conv-error');
+            errorElement.textContent = '';
+            
+            // 1. Lấy kích thước và tham số
+            const R = parseInt(document.getElementById('R').value);
+            const C = parseInt(document.getElementById('C').value);
+            const KR = parseInt(document.getElementById('KR').value);
+            const KC = parseInt(document.getElementById('KC').value);
+            const P = parseInt(document.getElementById('padding').value);
+            const S = parseInt(document.getElementById('stride').value);
+
+            if (isNaN(R) || R <= 0 || isNaN(C) || C <= 0 || isNaN(KR) || KR <= 0 || isNaN(KC) || KC <= 0 || isNaN(P) || P < 0 || isNaN(S) || S < 1) {
+                errorElement.textContent = "Lỗi: Kích thước hoặc tham số Tích chập không hợp lệ.";
+                return;
+            }
+
+            // 2. Lấy ma trận từ input grid
+            const inputMatrix = getMatrixFromInputs('input', R, C);
+            const kernelMatrix = getMatrixFromInputs('kernel', KR, KC);
+
+            if (!inputMatrix || !kernelMatrix) return; 
+
+            // 3. Tính kích thước đầu ra
+            const OR = Math.floor((R - KR + 2 * P) / S) + 1;
+            const OC = Math.floor((C - KC + 2 * P) / S) + 1;
+
+            if (OR <= 0 || OC <= 0) {
+                 errorElement.textContent = `Lỗi: Kích thước ma trận đầu ra không hợp lệ (${OR}x${OC}). Vui lòng kiểm tra lại tham số.`;
+                 return;
+            }
+            
+            document.getElementById('output-size').textContent = `${OR} x ${OC}`;
+            
+            // 4. Thêm Padding và thực hiện tích chập
+            const PR = R + 2 * P;
+            const PC = C + 2 * P;
+            const paddedMatrix = Array(PR).fill(0).map(() => Array(PC).fill(0));
+
+            for (let i = 0; i < R; i++) {
+                for (let j = 0; j < C; j++) {
+                    paddedMatrix[i + P][j + P] = inputMatrix[i][j];
+                }
+            }
+            
+            const outputMatrix = Array(OR).fill(0).map(() => Array(OC).fill(0));
+            
+            for (let i = 0; i < OR; i++) {
+                for (let j = 0; j < OC; j++) {
+                    let sum = 0;
+                    const start_row = i * S;
+                    const start_col = j * S;
+
+                    for (let kr = 0; kr < KR; kr++) {
+                        for (let kc = 0; kc < KC; kc++) {
+                            sum += paddedMatrix[start_row + kr][start_col + kc] * kernelMatrix[kr][kc];
+                        }
+                    }
+                    outputMatrix[i][j] = sum;
+                }
+            }
+
+            // 5. Hiển thị kết quả và chuẩn bị cho bước tiếp theo
+            CONV_RESULT_MATRIX = outputMatrix;
+            displayMatrixGrid(outputMatrix, 'convolution-output-container');
+            document.getElementById('convolution-result-section').style.display = 'block';
+            document.getElementById('median-filter-section').style.display = 'block';
+        }
+
+        // --- HÀM TÍNH TOÁN LỌC TRUNG VỊ ---
+
+        /**
+         * Tính giá trị trung vị từ mảng các giá trị.
+         */
+        function calculateMedian(arr, mode) {
+            const n = arr.length;
+            if (n === 0) return 0;
+            
+            arr.sort((a, b) => a - b); 
+
+            if (n % 2 !== 0) {
+                // Lẻ: Trả về phần tử chính giữa
+                return arr[Math.floor(n / 2)]; 
+            } else {
+                // Chẵn: Có hai phần tử giữa
+                const val1 = arr[n / 2 - 1]; 
+                const val2 = arr[n / 2];     
+
+                if (mode === 'first') {
+                    // Yêu cầu: "lấy giá trị ban đầu" (giá trị đầu tiên trong cặp giữa sau khi sắp xếp)
+                    return val1; 
+                } else { // 'average'
+                    return (val1 + val2) / 2;
+                }
+            }
+        }
+
+        function performMedianFilter() {
+            const errorElement = document.getElementById('median-error');
+            errorElement.textContent = '';
+            
+            if (CONV_RESULT_MATRIX.length === 0) {
+                errorElement.textContent = "Lỗi: Vui lòng thực hiện Tích chập trước.";
+                return;
+            }
+
+            // 1. Lấy tham số
+            const N = parseInt(document.getElementById('median-kernel-size').value);
+            const mode = document.getElementById('median-mode').value;
+
+            if (isNaN(N) || N <= 0 || N % 2 === 0) {
+                errorElement.textContent = "Lỗi: Kích thước Window Trung vị (N) phải là số lẻ dương (ví dụ: 3, 5).";
+                return;
+            }
+
+            const R = CONV_RESULT_MATRIX.length;
+            const C = CONV_RESULT_MATRIX[0].length;
+            const P_median = Math.floor(N / 2); 
+            
+            const medianOutputMatrix = Array(R).fill(0).map(() => Array(C).fill(0));
+
+            // 2. Thực hiện Lọc Trung vị
+            for (let r = 0; r < R; r++) {
+                for (let c = 0; c < C; c++) {
+                    const neighbors = [];
+                    
+                    // Lặp qua cửa sổ N x N 
+                    for (let i = -P_median; i <= P_median; i++) {
+                        for (let j = -P_median; j <= P_median; j++) {
+                            const neighborR = r + i;
+                            const neighborC = c + j;
+
+                            // Kiểm tra biên (sử dụng Zero Padding)
+                            if (neighborR >= 0 && neighborR < R && neighborC >= 0 && neighborC < C) {
+                                neighbors.push(CONV_RESULT_MATRIX[neighborR][neighborC]);
+                            } else {
+                                neighbors.push(0); // Zero Padding cho biên
+                            }
+                        }
+                    }
+
+                    // Tính trung vị
+                    medianOutputMatrix[r][c] = calculateMedian(neighbors, mode);
+                }
+            }
+
+            // 3. Hiển thị kết quả
+            displayMatrixGrid(medianOutputMatrix, 'median-output-container');
+        }
+        
+        // --- KHỞI TẠO BAN ĐẦU ---
+        window.onload = function() {
+            // Tự động tạo lưới ma trận khi tải trang
+            generateMatrixInputs('input');
+            generateMatrixInputs('kernel');
+        };
+
+    </script>
+</body>
+</html>
